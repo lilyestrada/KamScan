@@ -1,0 +1,39 @@
+2026-03-12 11:11:17,910 - INFO - Log file created and ready for new logging.
+2026-03-12 11:11:17,916 - INFO - Covariates file read
+2026-03-12 11:11:17,918 - INFO - Normalization file read once.
+2026-03-12 11:11:46,374 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:11:46,504 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:11:46,612 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:11:46,782 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:12:14,732 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:12:14,982 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:12:15,248 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:12:15,520 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:12:43,356 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:12:43,582 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:12:43,898 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:12:44,096 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:13:12,052 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:13:12,240 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:13:12,630 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:13:12,675 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:16:18,985 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:16:19,951 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:16:20,477 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:16:20,683 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:19:57,038 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:19:58,677 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:19:59,120 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:20:00,188 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:23:35,455 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:23:37,304 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:23:37,798 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:23:39,496 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:27:14,000 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:27:14,489 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:27:16,265 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:27:19,189 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:28:01,054 - INFO - Chunk processed: 6113 rows
+2026-03-12 11:30:47,751 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:30:51,695 - INFO - Chunk processed: 30000 rows
+2026-03-12 11:30:52,499 - INFO - Condition file treated

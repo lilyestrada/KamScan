@@ -70,7 +70,7 @@ if 0 < args.top_tags <= 1:
     args.top_tags = int(args.top_tags * total_tags)
 else:
     args.top_tags = int(args.top_tags)
-    
+
 # ......................................................
 #
 #   READ COVARIATES DATA ----
@@ -115,6 +115,11 @@ pool = mp.Pool(processes=args.processes)
 top_tags_list = []
 condition_files = [file for ext in ('*.tsv', '*.txt') for file in glob.glob(os.path.join(args.condition_folder, ext))]
 
+# Build dtype dict for faster CSV parsing: tag col as str, sample cols as float64
+dtype_dict = {header[0]: str}
+for col in header[1:]:
+    dtype_dict[col] = np.float64
+
 for condition_file in condition_files:
     data_dict = create_data_dict(condition_file, args.test_type)
 
@@ -128,35 +133,45 @@ for condition_file in condition_files:
         norm_factor_c=args.norm_factor
     )
 
-    chunk_iter = pd.read_csv(args.input, sep=input_separator, chunksize=args.chunk_size)
-    result = pool.imap(func, chunk_iter)
+    # Use pyarrow engine for faster CSV parsing, fall back to default C engine
+    try:
+        chunk_iter = pd.read_csv(args.input, sep=input_separator, chunksize=args.chunk_size,
+                                 engine='pyarrow', dtype=dtype_dict)
+    except (ImportError, TypeError):
+        chunk_iter = pd.read_csv(args.input, sep=input_separator, chunksize=args.chunk_size,
+                                 dtype=dtype_dict)
+
+    # imap_unordered: order doesn't matter for top-K, final sort ensures output order
+    result = pool.imap_unordered(func, chunk_iter)
 
     top_tags = []
+    top_scores = np.array([], dtype=np.float64)
+
     if args.test_type == 'pitest':
         for chunk_results in result:
-            top_tags = keep_top_n(top_tags, chunk_results, args.top_tags, key_index=1, reverse=True)
-        # Final sort: largest pi-value first
+            new_scores = np.array([r[1] for r in chunk_results], dtype=np.float64)
+            top_tags, top_scores = keep_top_n(top_tags, top_scores, chunk_results, new_scores, args.top_tags, reverse=True)
         top_tags.sort(key=lambda x: x[1], reverse=True)
         top_tags_list.append(top_tags)
 
     elif args.test_type in ('ttest', 'anova', 'wilcoxon'):
         for chunk_results in result:
-            top_tags = keep_top_n(top_tags, chunk_results, args.top_tags, key_index=0, reverse=True)
-        # Final sort: largest test statistic first
+            new_scores = np.array([r[0] for r in chunk_results], dtype=np.float64)
+            top_tags, top_scores = keep_top_n(top_tags, top_scores, chunk_results, new_scores, args.top_tags, reverse=True)
         top_tags.sort(key=lambda x: x[0], reverse=True)
         top_tags_list.append(top_tags)
 
     elif args.test_type == 'ziw':
         for chunk_results in result:
-            top_tags = keep_top_n(top_tags, chunk_results, args.top_tags, key_index=0, reverse=True)
-        # Final sort: largest test statistic first
+            new_scores = np.array([r[0] for r in chunk_results], dtype=np.float64)
+            top_tags, top_scores = keep_top_n(top_tags, top_scores, chunk_results, new_scores, args.top_tags, reverse=True)
         top_tags.sort(key=lambda x: x[0], reverse=True)
         top_tags_list.append(top_tags)
 
     elif args.test_type == 'variance':
         for chunk_results in result:
-            top_tags = keep_top_n(top_tags, chunk_results, args.top_tags, key_index=0, reverse=True)
-        # Final sort: largest variance first
+            new_scores = np.array([r[0] for r in chunk_results], dtype=np.float64)
+            top_tags, top_scores = keep_top_n(top_tags, top_scores, chunk_results, new_scores, args.top_tags, reverse=True)
         top_tags.sort(key=lambda x: x[0], reverse=True)
         top_tags_list.append(top_tags)
 
@@ -176,6 +191,7 @@ elif args.test_type == 'variance':
 # ......................................................
 #
 #   OUTPUT TOP K-MERS ----
+#   Batch output writing: build all lines, single write
 #
 # ......................................................
 try:
@@ -185,28 +201,34 @@ except OSError:
 
 os.makedirs(args.output_folder)
 
+header_line = ' '.join(header)
+
 for condition_file, top_tags in zip(condition_files, top_tags_list):
     condition_name = os.path.splitext(os.path.basename(condition_file))[0]
 
     output_file = os.path.join(args.output_folder, f"{condition_name}.txt")
+
+    lines = [header_line]
+
+    if args.test_type in ('ttest', 'anova', 'wilcoxon'):
+        for t_statistic, values, log2fold_change, p_value in top_tags:
+            lines.append(f"{values} {round(t_statistic, 2):g} {round(log2fold_change, 2):g} {p_value:.2g}")
+
+    elif args.test_type == 'ziw':
+        for test_statistic, values, log2fold_change, p_value in top_tags:
+            lines.append(f"{values} {round(test_statistic, 2):g} {round(log2fold_change, 2):g} {p_value:.2g}")
+
+    elif args.test_type == 'pitest':
+        for values, pivalue, log2fold_change in top_tags:
+            lines.append(f"{values} {pivalue} {log2fold_change}")
+
+    elif args.test_type == 'variance':
+        for variance_value, cv_value, values in top_tags:
+            lines.append(f"{values} {round(variance_value, 2):g} {round(cv_value, 2):g}")
+
     with open(output_file, 'w') as file:
-        file.write(' '.join(header) + '\n')
-
-        if args.test_type in ('ttest', 'anova', 'wilcoxon'):
-            for t_statistic, values, log2fold_change, p_value in top_tags:
-                file.write(f"{values} {round(t_statistic, 2):g} {round(log2fold_change, 2):g} {p_value:.2g}\n")
-
-        elif args.test_type == 'ziw':
-            for test_statistic, values, log2fold_change, p_value in top_tags:
-                file.write(f"{values} {round(test_statistic, 2):g} {round(log2fold_change, 2):g} {p_value:.2g}\n")
-
-        elif args.test_type == 'pitest':
-            for values, pivalue, log2fold_change in top_tags:
-                file.write(f"{values} {pivalue} {log2fold_change}\n")
-                
-        elif args.test_type == 'variance':
-            for variance_value, cv_value, values in top_tags:
-                file.write(f"{values} {round(variance_value, 2):g} {round(cv_value, 2):g}\n")
+        file.write('\n'.join(lines))
+        file.write('\n')
 
 end_time = time.time()
 print("Execution time: {:.3f} s".format(end_time - start_time))
